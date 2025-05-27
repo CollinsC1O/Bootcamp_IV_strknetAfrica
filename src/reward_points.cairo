@@ -34,7 +34,7 @@ mod UserRewardPoint {
     enum Event {
         Add_point: Add_point,
         Redeem_point: Redeem_point,
-        Transfer_point: Transfer_point,
+        Transfer_point: Point_transfer,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -50,7 +50,7 @@ mod UserRewardPoint {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct Transfer_point {
+    struct Point_transfer {
         user: ContractAddress,
         new_user: ContractAddress,
         points: felt252,
@@ -68,13 +68,17 @@ mod UserRewardPoint {
             assert(user != zero_address, 'Address cannot be zero');
 
             self.user_points.write(user, points);
+
+            self.emit(Add_point { user: user, points: points })
         }
 
         fn redeem_points(self: @ContractState, user: ContractAddress) -> felt252 {
             let zero_address = contract_address_const::<0>();
             assert(user != zero_address, 'Address cannot be zero');
 
-            self.user_points.read(user)
+            let user_points = self.user_points.read(user);
+
+            user_points
         }
 
         fn transfer_points(
@@ -105,6 +109,8 @@ mod UserRewardPoint {
             //Transfer points
             self.user_points.write(user, user_points - points);
             self.user_points.write(new_user, reciever_points + points);
+
+            self.emit(Point_transfer { user: user, new_user: new_user, points: points });
 
             true
         }
